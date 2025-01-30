@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       htmx.org:
-        specifier: ^1.9.12
+        specifier: ^1.9.6
         version: 1.9.12
     devDependencies:
       autoprefixer:
