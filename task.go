@@ -1,6 +1,8 @@
 package main
 
-import "context"
+import (
+	"context"
+)
 
 type Item struct {
 	ID        int
@@ -35,6 +37,8 @@ func fetchTasks() ([]Item, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		items = append(items, item)
 	}
 
 	return items, nil
@@ -84,13 +88,25 @@ func fetchCount() (int, error) {
 	return count, nil
 }
 
+func fetchCompletedCount() (int, error) {
+	var count int
+
+	err := DB.QueryRow(`SELECT count(*) FROM tasks WHERE completed = 1;`).Scan(&count)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func insertTask(title string) (Item, error) {
 	count, err := fetchCount()
 	if err != nil {
 		return Item{}, err
 	}
 	var id int
-	err = DB.QueryRow("insert into tasks (title, position) values (?, ?) returning id", title, count).Scan(&id)
+	err = DB.QueryRow("INSERT INTO tasks (title, position) VALUES (?, ?) RETURNING id", title, count).Scan(&id)
 	if err != nil {
 		return Item{}, err
 	}
@@ -99,11 +115,11 @@ func insertTask(title string) (Item, error) {
 }
 
 func deleteTask(ctx context.Context, ID int) error {
-	_, err := DB.Exec("delete from tasks where id = (?)", ID)
+	_, err := DB.Exec("DELETE FROM tasks WHERE id = (?)", ID)
 	if err != nil {
 		return err
 	}
-	rows, err := DB.Query("select id from tasks order by position")
+	rows, err := DB.Query("SELECT id FROM tasks ORDER BY position")
 	if err != nil {
 		return err
 	}
@@ -122,7 +138,7 @@ func deleteTask(ctx context.Context, ID int) error {
 	}
 	defer tx.Rollback()
 	for idx, id := range ids {
-		_, err := tx.Exec("update tasks set position = (?) where id = (?)", idx, id)
+		_, err := tx.Exec("UPDATE tasks SET position = (?) WHERE id = (?)", idx, id)
 		if err != nil {
 			return err
 		}
@@ -141,7 +157,7 @@ func orderTasks(ctx context.Context, values []int) error {
 	}
 	defer tx.Rollback()
 	for i, v := range values {
-		_, err := tx.Exec("update tasks set position = (?) where id = (?)", i, v)
+		_, err := tx.Exec("UPDATE tasks SET position = (?) WHERE id = (?)", i, v)
 		if err != nil {
 			return err
 		}
@@ -150,4 +166,16 @@ func orderTasks(ctx context.Context, values []int) error {
 		return err
 	}
 	return nil
+}
+
+func toggleTask(id int) (Item, error) {
+
+	var item Item
+
+	err := DB.QueryRow(`UPDATE tasks SET completed = CASE WHEN completed = 1 THEN 0 ELSE 1 END WHERE id = (?) RETURNING id, title, completed`, id).Scan(&item.ID, &item.Title, &item.Completed)
+	if err != nil {
+		return Item{}, err
+	}
+
+	return item, nil
 }
