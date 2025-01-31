@@ -21,6 +21,7 @@
     "vite": "^6.0.11"
   },
   "dependencies": {
-    "htmx.org": "^1.9.6"
+    "htmx.org": "^1.9.6",
+    "sortablejs": "^1.15.6"
   }
 }
